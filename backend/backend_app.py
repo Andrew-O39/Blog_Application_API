@@ -4,15 +4,24 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)  # This will enable CORS for all routes
 
+# In-memory list of blog posts (used instead of a database)
 POSTS = [
     {"id": 1, "title": "First post", "content": "This is the first post."},
     {"id": 2, "title": "Second post", "content": "This is the second post."},
 ]
 
-next_id = 3  # start from 3 since we have two posts
+next_id = 3  # Used to assign new post IDs. It starts from 3 since we have two posts already
 
 @app.route('/api/posts', methods=['GET'])
 def get_posts():
+    """
+    Retrieve all blog posts.
+    Optional query parameters:
+    - sort: 'title' or 'content'
+    - direction: 'asc' or 'desc'
+    Returns a list of posts, optionally sorted.
+    400 Bad Request if sort/direction are invalid.
+    """
     sort_field = request.args.get('sort')
     direction = request.args.get('direction', 'asc')
 
@@ -27,7 +36,7 @@ def get_posts():
     # Apply sorting if needed
     sorted_posts = POSTS
     if sort_field:
-        reverse = direction == 'desc'
+        reverse = direction == 'desc'  # Determine sort direction
         sorted_posts = sorted(POSTS, key=lambda x: x[sort_field].lower(), reverse=reverse)
 
     return jsonify(sorted_posts), 200
@@ -35,6 +44,12 @@ def get_posts():
 
 @app.route('/api/posts', methods=['POST'])
 def create_post():
+    """
+    Create a new blog post.
+    Returns:
+    201 Created: New post.
+    400 Bad Request: If title or content is missing.
+    """
     global next_id
     data = request.get_json()
 
@@ -60,6 +75,12 @@ def create_post():
 
 @app.route('/api/posts/<int:post_id>', methods=['DELETE'])
 def delete_post(post_id):
+    """
+    Delete a blog post by ID.
+    Returns:
+    200 OK: If deletion is successful.
+    404 Not Found: If post with given ID does not exist.
+    """
     global POSTS
     post_to_delete = next((post for post in POSTS if post["id"] == post_id), None)
 
@@ -72,6 +93,13 @@ def delete_post(post_id):
 
 @app.route('/api/posts/<int:post_id>', methods=['PUT'])
 def update_post(post_id):
+    """
+    Update an existing post by ID.
+    Returns:
+    200 OK: Updated post.
+    400 Bad Request: If body is invalid.
+    404 Not Found: If post with given ID does not exist.
+    """
     data = request.get_json()
 
     if data is None:
@@ -88,6 +116,14 @@ def update_post(post_id):
 
 @app.route('/api/posts/search', methods=['GET'])
 def search_posts():
+    """
+    Search posts by title and/or content.
+    Query Parameters:
+    - title (optional): Filter by title substring (case-insensitive)
+    - content (optional): Filter by content substring (case-insensitive)
+    Returns:
+    200 OK: List of matched posts (can be empty).
+    """
     title_query = request.args.get('title', '').lower()
     content_query = request.args.get('content', '').lower()
 
